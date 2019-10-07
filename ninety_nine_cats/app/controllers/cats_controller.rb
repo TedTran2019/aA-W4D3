@@ -1,4 +1,7 @@
 class CatsController < ApplicationController
+  before_action :not_signed_up, except: [:index, :show]
+  before_action :must_own, only: [:edit, :update]
+
   def index
     @cats = Cat.all
     render :index
@@ -16,6 +19,7 @@ class CatsController < ApplicationController
 
   def create
     @cat = Cat.new(cat_params)
+    @cat.owner_id = current_user.id
     if @cat.save
       redirect_to cat_url(@cat)
     else
@@ -43,5 +47,11 @@ class CatsController < ApplicationController
 
   def cat_params
     params.require(:cat).permit(:age, :birth_date, :color, :description, :name, :sex)
+  end
+
+  # In a before_action, you have access to params
+  def must_own
+    owned = current_user.cats.where(id: params[:id])
+    redirect_to(cats_url) if owned.empty?
   end
 end

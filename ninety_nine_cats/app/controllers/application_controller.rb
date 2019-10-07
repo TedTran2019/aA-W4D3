@@ -18,6 +18,10 @@ class ApplicationController < ActionController::Base
 		redirect_to(cats_url) if logged_in?
 	end
 
+	def not_signed_up
+		redirect_to(new_session_url) unless logged_in?
+	end
+
 	def logged_in?
 		!!current_user
 	end
