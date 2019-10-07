@@ -1,0 +1,13 @@
+<% action = (submit == "register" ? users_url : session_url) %>
+
+<form action="<%=action%>" method="post">
+	<input type="hidden" name="authenticity_token" value="<%=form_authenticity_token%>">
+
+	<label for="username">Name</label>
+	<input type="text" id="username" name="user[username]" value="<%=user.username%>">
+
+	<label for="password">Password</label>
+	<input type="password" name="user[password]" id="password">
+
+	<button type="submit"><%=submit%></button>
+</form>
