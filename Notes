@@ -1,0 +1,223 @@
+Secure State
+Strategies
+Cookies
+Authentication
+Encoding, encrypting
+Hacking
+Salting
+Session, flash
+Auth Pattern
+
+Privacy, security, etc.
+amazon.com/carts/412 -> You can see whatever is in what is in people's carts,
+and if there's no user you can buy things in their cart.
+Instead of ID, a randomly generated number? But that's not very good.
+Anybody that sees URL can steal my cart!
+Tie to person, but not expose the URL.
+
+Limitation of HTTP: It's stateless! Bring in cookies!
+Cookies -> small pieces of data sent from website to browser, stored on client-side
+Essentially it's just a giant hash-map. Then browser enforces rules like, if
+Amazon sends said cookie, only Amazon look at the cookie. Client browser will
+enforce all the rules!
+Sent out in the header of a HTTP request
+Store URL in cookie! -> Does this solve problem? Anybody can change their own
+cookie, so it doesn't solve the issues.
+Step 1 -> much longer randomly generated URL so can't be guessed
+Step 2 -> username/password so user owns a cart!
+Password in plain text -> people can see packets
+
+user -> [username/pw] -> server
+server -> [session token] -> user
+Just use session token everytime, after you logout, invalidate old session token.
+Think about how packet routing works!
+
+Primary problem -> what if someone gains access to our database?
+If do not escape SQL-- vulnerable to SQL injection.
+Encoding vs Encrypting
+Encoding = Base64 encoding -> entire ASCII character set -> much higher entropy
+-> with encoding, can encode / decode as long as you know rules
+Encrypting = Even if you know rules, don't know what original input is. Ie.
+you need the algorithm AND the secret key.
+Encrypted password? -> But where would you hide the key?
+Thus, both encoding and encrypting aren't viable solutions.
+
+Hashing! -> One way, can't turn it back around. Uniform, deterministic...
+Only store hash value in database w/ username, then when user enters password,
+check hashed password against hash in database
+Hash collision -> when two arbitrary strings hash to the same value would be an issue
+To minimize collisions, use cryptographic hashing functions! -> More secure.
+BCrypt(Uses blowfish)!
+Can generate collisions in MD5 by hand. It's too weak now!
+What is the weakness of this approach? -> USERS ARE STUPID. They will use the same
+password on every website, only secure as the least secure website they use. Next,
+they are not choosing random passwords. 90% use the 1000 most common passwords.
+Ex. password, password123, asdf1234, football, starwars.
+Ex. password, password123, password1234 is assumed to make up 83% of all passwords
+Cracker -> know most common 10k passwords -> test with every hashing function
+-> share with each other -> rainbow tables
+How to defend against rainbow tables? -> Salting
+Salting -> small randomly generated string, password + salt, hash the combined output
+
+What if brute force? -> Using a botnet -> what is the worth of cracking a pw? ->
+cost of cracking said pw to exceed cost of cracking it! -> Run through the hash
+function as many times you want.
+
+hunter12 -> something random -> something random -> ...etc. As long as it's the same
+number of times hashed every time -> fuck it, it isn't worth the effort
+------------------------------------------------
+require 'bcrypt'
+BCrypt::Password.create("password") -> you get meta data about number of times hashed,
+the salt, then the overall digest(salt + password hashed).
+#class, #ancestors, #methods are useful methods for Ruby metaprogramming
+For BCrypt::Password
+#checksum -> digest, (salt + password) hashed
+#cost -> How many iterations it was hashed
+#version -> version of Blowfish
+#salt -> entire randomly generated string
+#is_password? -> BCrypt::Password.new(db_pass).is_password?(given_password)
+
+Session -> kind of like params, available in views but primarily controller
+session[:session_token] -> store on client-side
+Put whatever arbitrary data into your cookie
+Least data in client side as possible.
+Cookie -> lasts 20 years
+Flash -> temporary cookie -> send error message, cookie only lasts for 1 request
+Aka this request and the next!
+flash[:user_error] = "Username can't be blank"
+flash.now -> Lives only for current request, instead of 1 request. It's not a
+cookie but it's easy to think about...
+
+Auth Pattern -> NEVER EVER ROLL YOUR OWN AUTHENTICATION. Just understand how it
+works.
+
+Model:
+User model -> validates :password, length: { minimum: 6, allow_nil: true}
+What does allow_nil do? -> Allows a password that is nil, but cannot have a
+length that is less than 6. When pull out of database, allows it to be nil, but
+allows the first check of minimum 6 on the original password.
+
+Overwrite password= to self.password_digest = BCrypt::Password
+ensure_session_token
+reset_session_token
+find_by_credentials(username, pw)
+
+Controllers:
+ApplicationController -> in all. @current_user ||=,login!(user),
+redirect_unless_logged_in
+UserController -> register
+SessionController -> log in, log out
+CatsController -> before_action :redirect unless logged in except [:etc, :etc]
+---------------------------------------------------
+Remember even singular resources have plural controller names.
+resource :whatever instead of resources :whatever
+
+CSRF attack
+action -> URL
+method -> HTTP method
+submit button -> Something tempting
+Hidden input field! Would make a request to another service.
+--CROSS SITE REQUEST FORGERY--
+This attack only works if you're logged in.
+
+CSRF token is SecureRandom::urlsafe_base64 -> store in cookie
+CSRF token -> hidden input, name = CSRF_token, value = csrf token
+helper_method :method_name allows you to use controller method in view
+
+#validate_csrf_token -> cookie's csrf token is equal to params csrf token
+Run on every request -> before_filter :validate_csrf_token, ideally do only
+on POST/PUT/PATCH/DELETE requests where there is form data.
+self.request.method -> huh... Tells the method of the request
+Can't really get information out of good site's cookie to steal CSRF token value
+
+Sandboxing -> each website cookies can't see each other's cookies
+
+Rails built-in CSRF
+name => authenticity_token
+value => form_authenticity_token
+Forget hidden authenticity token -> CSRF error on self
+------------------------------------------------
+
+HTTP -> stateless -> each request is independent of evey other -> controller
+reinitialized every time -> stateless protocols allow server software to be
+written more simply, fewer bugs, optimizations for scaling, etc.
+
+Cookie -> stores small piece of information on client side
+Session cookie -> cookie deleted when web browser closes
+Cookies can be edited or fake cookies (Think using cookie extension for exhentai)
+Session in a concept and cookies are how that concept is implemented.
+
+Contents of "session" hash are stored in cookie in Rails
+To remove from session, simply set to nil
+
+flash -> current and next (redirect)
+flash.now -> current (render) actually not a cookie
+
+Session -> accumulated context for an HTTP request
+Can implement with cookies or server's DB.
+Can also directly set/get data from a cookie using "cookies"
+Use session for everything but
+cookies.permanent[:session_token] = w/e to set a cookie that lasts for 20 years
+-- A COOKIE'S VALUE CAN ONLY BE A STRING. You're responsible for serialization
+or deserialization! W/ session, Rails will do that work for you.--
+
+Just include said boilerplate in form.
+Make customized snippets and forms to help speed up programming process!
+-------------------------------
+Database constraints
+Model, controller, and client-side Javascript validations exist too
+
+Can store obj.errors.full_messages in flash[:errors] and display in view
+Use a partial and boom, done! Can put in all pages
+-----------------------------------
+
+Phase 1: BCrypt
+BCrypt::Password.create("password")
+#is_password("password") to check
+
+Phase 2: User
+User -> username and password_digest
+BCrypt::Password.new(password_digest).is_password?("password")
+User#password=, User#is_password?
+
+Phase 3: New Users
+new view -> notice permit w/ :password instead of :password_digest because
+mass assignment will call password= method
+Validating: store "password" in an instance variable that's never saved to the
+DB (use @ instead of self). -> Can validate here by using allow_nil and whatever
+other validations. allow_nil will allow it to pass if the password is nil, because this
+attribute is only set thru password=.
+
+Phase 4: Logging in -> Verifying Credentials
+Singular resource session -> post to log in, delete to logout
+Notes: no session model or table, but can write resource. Is singular because
+user will only use at most 1, their own. Even w/ singular resource, controllers
+are always pluralized even if routes aren't.
+SessionsController -> new form -> create method -> User#find_by_credentials method
+
+Phase 5: Logging in -> Setting the Session
+User can only see own show page?
+User -> session token, after_initialize :ensure_session_token
+#generate session token, #reset session token, etc
+SecureRandom::urlsafe_base64(16)
+ApplicationController -> #login!, current_user
+login!-> sets current_user and session token in cookies
+current_user -> find user by session token
+helper_method :current_user to allow throughout any view
+When #create a session, must login!
+Same for when registering a user...
+
+Phase 6: Using the current_user
+In view, tell the user who they're logged in as if they're logged in
+Also add logout buttons if they're logged in
+Logout -> session #destroy, aka reset the user's session token and clear the
+session token in cookies
+
+before_action callback -> :require_current_user! only, except, etc methods
+require_current_user! -> redirect if not current user or if no user
+
+https://github.com/eshoule/rails_user_authentication
+If session's token == user's session token, then logged in!
+Fail softly vs fail loudly
+
+Migrate -> Model -> Routes -> Controller -> Views
