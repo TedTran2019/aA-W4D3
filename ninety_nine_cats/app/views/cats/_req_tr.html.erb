@@ -2,7 +2,7 @@
   <td><%= req.start_date %></td>
   <td><%= req.end_date %></td>
   <td>
-    <% if req.pending? %>
+    <% if req.pending? && req.cat_owner == current_user %>
         <form action="<%= approve_cat_rental_request_url(req) %>" method="post">
           <input
             type="hidden"
@@ -21,4 +21,5 @@
       <%= req.status %>
     <% end %>
   </td>
+  <td><%=req.requester.username%></td>
 </tr>

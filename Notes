@@ -221,3 +221,24 @@ If session's token == user's session token, then logged in!
 Fail softly vs fail loudly
 
 Migrate -> Model -> Routes -> Controller -> Views
+
+@password -> attr_reader :password for validation to occur
+Otherwise this instance variable that's never saved in DB can't be validated
+
+Be able to create a user authentication system
+Know the user model's methods that are required for authentication
+reset_session_token, password=, is_password?, find_by_credentials
+Know what it means to create and destroy a session
+Know how cookies and sessions interact in a current_user method
+Know how to access the current user from within a view
+
+Redirection inside before_action cancels further processing of request
+A before_action has all the params!
+
+Lazy-loading -> if you don't need it, don't even bother loading it.
+
+Multiple session functionality? -> session_tokens stored on DB and attached
+to a certain user.
+
+request.env -> info about each session like iPad, PC, etc
+request.remote_ip -> physical location
